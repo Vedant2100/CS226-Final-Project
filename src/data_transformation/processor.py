@@ -19,7 +19,7 @@ def run_transformation_pipeline(results, forest_data_path, aws_key, aws_secret):
     sedona = get_sedona_context(aws_key, aws_secret)
     
     # Data Handoff
-    spark_input = sedona.createDataFrame(results, ["tile_id", "acquisition_date", "file_url", "ndvi_mean", "resolution", "bbox_wkt"])
+    spark_input = sedona.createDataFrame(results, ["tile_id", "acquisition_date", "file_url", "ndvi_mean", "resolution_m", "bbox_wkt"])
     
     masked_df = apply_forest_mask(spark_input, forest_data_path)
     
