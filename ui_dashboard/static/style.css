@@ -1,0 +1,237 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #dfe9e2;
+    color: #123b2d;
+}
+
+.page {
+    padding: 20px 16px;
+}
+
+.dashboard-card {
+    max-width: 900px;
+    margin: 24px auto;
+    background: #f7f7f7;
+    border-radius: 24px;
+    padding: 28px 30px 34px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.header h1 {
+    font-size: 34px;
+    margin: 0 0 10px;
+    color: #0f5b22;
+    font-weight: 700;
+}
+
+.header p {
+    font-size: 17px;
+    color: #46655b;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.analysis-form {
+    margin-top: 18px;
+}
+
+.input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #123b2d;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 16px;
+    border-radius: 14px;
+    border: 1px solid #bfd0c3;
+    box-sizing: border-box;
+    background: #f8fbf9;
+    color: #123b2d;
+    outline: none;
+}
+
+.form-group input:focus {
+    border-color: #2e7d32;
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.12);
+}
+
+.options-box {
+    background: #edf4ef;
+    border: 1px solid #cfddd2;
+    border-radius: 18px;
+    padding: 16px 20px;
+    margin-bottom: 22px;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 17px;
+    margin: 10px 0;
+    color: #123b2d;
+}
+
+.checkbox-row input {
+    width: 21px;
+    height: 21px;
+    accent-color: #1f7226;
+}
+
+.run-btn {
+    width: 100%;
+    border: none;
+    border-radius: 18px;
+    padding: 14px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    background: #1f7226;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.run-btn:hover {
+    background: #1a6320;
+}
+
+.run-btn:active {
+    transform: translateY(1px);
+}
+
+.results-section {
+    margin-top: 34px;
+    padding-top: 22px;
+    border-top: 1px solid #d8dfda;
+}
+
+.results-section h2 {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 22px;
+    color: #0f5b22;
+}
+
+.error-box {
+    background: #fbe8e8;
+    color: #c52b12;
+    border: 1px solid #efb2aa;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+    margin-bottom: 22px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.info-box {
+    background: #edf6ee;
+    color: #1f5a2e;
+    border: 1px solid #cde1d0;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+    margin-bottom: 22px;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.summary-card,
+.details-card {
+    background: #f8fbf8;
+    border: 1px solid #d7e3d8;
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.summary-card h3,
+.details-card h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 19px;
+    color: #0f5b22;
+}
+
+.summary-card p,
+.details-card p,
+.folder-list li {
+    font-size: 16px;
+    color: #35564a;
+    margin: 6px 0;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.details-card {
+    margin-top: 16px;
+}
+
+.folder-list {
+    margin: 0;
+    padding-left: 22px;
+}
+
+.status-available {
+    color: #1f7226;
+    font-weight: 700;
+}
+
+.status-pending {
+    color: #b06b00;
+    font-weight: 700;
+}
+
+.status-unavailable {
+    color: #c52b12;
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .dashboard-card {
+        padding: 22px 16px 26px;
+    }
+
+    .input-grid,
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .header h1 {
+        font-size: 28px;
+    }
+
+    .header p {
+        font-size: 15px;
+    }
+
+    .results-section h2 {
+        font-size: 24px;
+    }
+}
