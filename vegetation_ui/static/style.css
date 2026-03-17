@@ -24,28 +24,23 @@ body { margin:0; font-family:Arial,sans-serif; background:#eef3ef; color:#163b2a
 .anomaly-banner  { background:#fbe3e3; border:1px solid #efb8b8; color:#9c2b2b; }
 .error-message   { background:#fbe3e3; border:1px solid #efb8b8; color:#9c2b2b; text-align:left; }
 
-/* Section blocks */
 .section-block { margin-bottom:38px; }
-.section-title {
-    color:#0d5a36; font-size:1.2rem; font-weight:800;
-    margin:0 0 16px; padding-bottom:10px;
-    border-bottom:2px solid #d4e3d6;
-    display:flex; align-items:center; gap:10px;
-}
-.source-tag {
-    font-size:0.75rem; font-weight:700;
-    background:#e0ede3; color:#3a7a54;
-    padding:3px 10px; border-radius:999px;
-    border:1px solid #c2d7c8;
-}
+.section-title { color:#0d5a36; font-size:1.2rem; font-weight:800; margin:0 0 16px; padding-bottom:10px; border-bottom:2px solid #d4e3d6; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.source-tag { font-size:0.75rem; font-weight:700; background:#e0ede3; color:#3a7a54; padding:3px 10px; border-radius:999px; border:1px solid #c2d7c8; }
+.run-ids-tag { font-size:0.8rem; font-weight:600; color:#49695b; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.run-id-pill { background:#f0f4f1; border:1px solid #c2d7c8; color:#0d5a36; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-family:monospace; }
 
-/* Summary cards */
 .results-grid { display:grid; grid-template-columns:repeat(4,minmax(160px,1fr)); gap:16px; }
 .info-card { background:#f3f7f3; border:1px solid #d3dfd5; border-radius:20px; padding:18px 20px; }
 .info-card h2 { margin:0 0 8px; color:#0d5a36; font-size:0.9rem; font-weight:800; }
 .info-card p  { margin:0; font-size:1rem; line-height:1.5; color:#294d3b; }
 .warning-text { color:#b84800 !important; font-weight:700; }
 .success-text  { color:#0d5a36  !important; font-weight:700; }
+
+/* Timelapse */
+.timelapse-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.timelapse-card { background:white; border:1px solid #d3dfd5; border-radius:20px; padding:18px; }
+.timelapse-img  { width:100%; border-radius:12px; border:1px solid #e0eae2; }
 
 /* Charts */
 .chart-row { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin-bottom:20px; }
@@ -58,11 +53,29 @@ body { margin:0; font-family:Arial,sans-serif; background:#eef3ef; color:#163b2a
 #anomalyMap { width:100%; height:500px; border-radius:16px; border:1px solid #d3dfd5; }
 .map-legend { display:flex; align-items:center; gap:6px; margin-bottom:10px; font-size:0.9rem; color:#4a6b57; }
 .legend-dot { display:inline-block; width:12px; height:12px; border-radius:50%; }
-.dot-anomaly { background:#c0392b; }
-.dot-normal  { background:#27ae60; opacity:0.6; }
+.dot-anomaly { background:#c0392b; } .dot-normal { background:#27ae60; opacity:0.6; }
+
+/* Pipeline metrics table */
+.metrics-table-wrap { overflow-x:auto; }
+.metrics-table { width:100%; border-collapse:collapse; background:#f3f7f3; border-radius:16px; overflow:hidden; border:1px solid #d3dfd5; font-size:0.82rem; }
+.metrics-table thead tr { background:#0d5a36; color:white; }
+.metrics-table th { padding:10px 14px; text-align:left; font-weight:700; white-space:nowrap; }
+.metrics-table td { padding:9px 14px; border-top:1px solid #e0eae2; color:#294d3b; white-space:nowrap; }
+.metrics-table tr:nth-child(even) { background:#edf4ee; }
+
+/* Year table */
+.yearly-table { width:100%; border-collapse:collapse; background:#f3f7f3; border-radius:18px; overflow:hidden; border:1px solid #d3dfd5; }
+.yearly-table thead tr { background:#0d5a36; color:white; }
+.yearly-table th { padding:14px 18px; text-align:left; font-size:0.95rem; font-weight:700; }
+.yearly-table td { padding:13px 18px; font-size:0.95rem; color:#294d3b; border-top:1px solid #e0eae2; }
+.row-anomaly { background:#fff5f5; } .row-clean { background:white; }
+.row-anomaly:hover { background:#ffe8e8; } .row-clean:hover { background:#f0faf2; }
+.status-badge { display:inline-block; padding:5px 12px; border-radius:999px; font-size:0.85rem; font-weight:700; }
+.badge-anomaly { background:#fbe3e3; color:#9c2b2b; border:1px solid #efb8b8; }
+.badge-clean   { background:#dde8df; color:#0d5a36; border:1px solid #c2d7c8; }
 
 @media (max-width:900px) {
-    .input-grid, .results-grid, .chart-row { grid-template-columns:1fr; }
-    .page { padding:18px 14px 30px; }
-    .dashboard-card { padding:18px; border-radius:20px; }
+  .input-grid,.results-grid,.chart-row,.timelapse-grid { grid-template-columns:1fr; }
+  .page { padding:18px 14px 30px; }
+  .dashboard-card { padding:18px; border-radius:20px; }
 }

@@ -33,7 +33,7 @@
     <input type="checkbox" id="generate_timelapse" name="generate_timelapse" {% if generate_timelapse %}checked{% endif %}>
     <label for="generate_timelapse">Generate Timelapse</label>
    </div>
-   <button type="submit" class="run-btn">▶ Run Analysis</button>
+   <button type="submit" class="run-btn">Run Analysis</button>
   </form>
 
   {% if error %}<div class="message error-message">{{ error }}</div>{% endif %}
@@ -41,12 +41,21 @@
   {% if result %}
 
   <div class="message {% if result.anomaly_detected %}anomaly-banner{% else %}success-message{% endif %}">
-   {{ result.banner_message }}
+   {% if result.anomaly_detected %}⚠{% endif %} {{ result.banner_message }}
   </div>
 
-  <!-- SECTION 1: Summary Cards -->
+  <!-- SECTION 1: Summary -->
   <div class="section-block">
-   <h2 class="section-title">📊 Summary</h2>
+   <h2 class="section-title">📊 Summary
+    {% if result.run_ids %}
+    <span class="run-ids-tag">
+     Run{% if result.run_ids|length > 1 %}s{% endif %}:
+     {% for rid in result.run_ids %}
+      <span class="run-id-pill">{{ rid }}</span>
+     {% endfor %}
+    </span>
+    {% endif %}
+   </h2>
    <div class="results-grid">
     <div class="info-card">
      <h2>Selected Timeframe</h2>
@@ -58,7 +67,9 @@
     </div>
     <div class="info-card">
      <h2>Overall Result</h2>
-     <p class="{% if result.anomaly_detected %}warning-text{% else %}success-text{% endif %}">{{ result.anomaly_result }}</p>
+     <p class="{% if result.anomaly_detected %}warning-text{% else %}success-text{% endif %}">
+      {% if result.anomaly_detected %}⚠{% endif %} {{ result.anomaly_result }}
+     </p>
     </div>
     <div class="info-card">
      <h2>Total Anomaly Events</h2>
@@ -79,7 +90,22 @@
    </div>
   </div>
 
-  <!-- SECTION 2: Monthly Trends -->
+  <!-- SECTION 2: Timelapse GIFs -->
+  {% if result.generate_timelapse and result.timelapse_urls %}
+  <div class="section-block">
+   <h2 class="section-title">🎬 Timelapse Animations <span class="source-tag">S3 GIFs</span></h2>
+   <div class="timelapse-grid">
+    {% for label, url in result.timelapse_urls.items() %}
+    <div class="timelapse-card">
+     <h3 class="chart-title">{{ label }}</h3>
+     <img src="{{ url }}" alt="{{ label }} timelapse" class="timelapse-img"/>
+    </div>
+    {% endfor %}
+   </div>
+  </div>
+  {% endif %}
+
+  <!-- SECTION 3: Monthly Trends -->
   {% if result.monthly_chart_json != '[]' %}
   <div class="section-block">
    <h2 class="section-title">📈 Monthly Trends <span class="source-tag">monthly_stats</span></h2>
@@ -96,25 +122,25 @@
   </div>
   {% endif %}
 
-  <!-- SECTION 3: Pixel-Level Analysis -->
+  <!-- SECTION 4: Pixel-Level Analysis -->
   <div class="section-block">
    <h2 class="section-title">🔬 Pixel-Level Analysis <span class="source-tag">plot_stats</span></h2>
    <div class="chart-row">
     <div class="chart-card">
      <h3 class="chart-title">NDVI vs NDMI Scatter</h3>
-     <p class="chart-subtitle">🟢 Normal pixels · 🔴 Anomalous pixels (sampled)</p>
+     <p class="chart-subtitle">Green = normal pixels · Red = anomalous pixels (sampled)</p>
      <canvas id="scatterChart"></canvas>
     </div>
     <div class="chart-card">
      <h3 class="chart-title">Anomalous Pixels per Month</h3>
-     <p class="chart-subtitle">Total pixels flagged each month across all types</p>
+     <p class="chart-subtitle">Total pixels flagged each month</p>
      <canvas id="heatmapChart"></canvas>
     </div>
    </div>
    <div class="chart-row">
     <div class="chart-card">
      <h3 class="chart-title">Z-Score Distribution</h3>
-     <p class="chart-subtitle">Clipped to ±10 for clarity · Values beyond ±2 are flagged anomalies</p>
+     <p class="chart-subtitle">Clipped to ±10 · Values beyond ±2 are flagged anomalies</p>
      <canvas id="zscoreChart"></canvas>
     </div>
     <div class="chart-card">
@@ -125,7 +151,7 @@
    </div>
   </div>
 
-  <!-- SECTION 4: Anomaly Map -->
+  <!-- SECTION 5: Anomaly Map -->
   <div class="section-block">
    <h2 class="section-title">🗺 Anomaly Map <span class="source-tag">pixel_coords + anomaly_events</span></h2>
    <div class="map-legend">
@@ -134,6 +160,58 @@
    </div>
    <div id="anomalyMap"></div>
   </div>
+
+  <!-- SECTION 6: Pipeline Metrics -->
+  {% if result.pipeline_metrics %}
+  <div class="section-block">
+   <h2 class="section-title">⚡ Pipeline Metrics <span class="source-tag">pipeline_metrics.csv</span></h2>
+   <div class="metrics-table-wrap">
+    <table class="metrics-table">
+     <thead>
+      <tr>
+       {% for key in result.pipeline_metrics[0].keys() %}
+       <th>{{ key }}</th>
+       {% endfor %}
+      </tr>
+     </thead>
+     <tbody>
+      {% for row in result.pipeline_metrics %}
+      <tr>
+       {% for val in row.values() %}
+       <td>{{ val }}</td>
+       {% endfor %}
+      </tr>
+      {% endfor %}
+     </tbody>
+    </table>
+   </div>
+  </div>
+  {% endif %}
+
+  <!-- SECTION 7: Year-by-Year Breakdown -->
+  {% if result.yearly_breakdown %}
+  <div class="section-block">
+   <h2 class="section-title">📅 Year-by-Year Breakdown</h2>
+   <table class="yearly-table">
+    <thead>
+     <tr><th>Year</th><th>Status</th><th>Total Events</th><th>NDVI Events</th><th>NDMI Events</th></tr>
+    </thead>
+    <tbody>
+     {% for row in result.yearly_breakdown %}
+     <tr class="{% if row.anomaly_detected %}row-anomaly{% else %}row-clean{% endif %}">
+      <td><strong>{{ row.year }}</strong></td>
+      <td><span class="status-badge {% if row.anomaly_detected %}badge-anomaly{% else %}badge-clean{% endif %}">
+       {% if row.anomaly_detected %}⚠ Anomaly Detected{% else %}✓ No Anomaly{% endif %}
+      </span></td>
+      <td>{{ row.total_events }}</td>
+      <td>{{ row.ndvi_count }}</td>
+      <td>{{ row.ndmi_count }}</td>
+     </tr>
+     {% endfor %}
+    </tbody>
+   </table>
+  </div>
+  {% endif %}
 
   {% endif %}
  </div>
@@ -170,28 +248,16 @@ if (monthlyData.length) {
   };
 
   new Chart(document.getElementById("combinedChart"), {
-    type: "line",
-    plugins: [anomalyBgPlugin],
+    type: "line", plugins: [anomalyBgPlugin],
     data: { labels, datasets: [
       { label:"NDVI Actual",   data:monthlyData.map(d=>d.avg_ndvi),          borderColor:"#27ae60", backgroundColor:"rgba(39,174,96,0.1)",  borderWidth:2.5, pointRadius:5, pointBackgroundColor:"#27ae60", tension:0.3, fill:false },
       { label:"NDVI Baseline", data:monthlyData.map(d=>d.avg_ndvi_baseline), borderColor:"#27ae60", backgroundColor:"transparent",           borderWidth:1.5, pointRadius:3, pointBackgroundColor:"#27ae60", tension:0.3, fill:false, borderDash:[6,4] },
       { label:"NDMI Actual",   data:monthlyData.map(d=>d.avg_ndmi),          borderColor:"#2980b9", backgroundColor:"rgba(41,128,185,0.1)", borderWidth:2.5, pointRadius:5, pointBackgroundColor:"#2980b9", tension:0.3, fill:false },
       { label:"NDMI Baseline", data:monthlyData.map(d=>d.avg_ndmi_baseline), borderColor:"#2980b9", backgroundColor:"transparent",           borderWidth:1.5, pointRadius:3, pointBackgroundColor:"#2980b9", tension:0.3, fill:false, borderDash:[6,4] },
     ]},
-    options: {
-      responsive:true,
-      interaction:{ mode:"index", intersect:false },
-      plugins:{
-        legend:{ position:"top" },
-        tooltip:{ callbacks:{ afterBody: items => {
-          const d = monthlyData[items[0].dataIndex];
-          return d.is_anomaly ? ["","Anomaly month"] : [];
-        }}}
-      },
-      scales:{
-        x:{ grid:{ color:gridColor } },
-        y:{ min:-0.1, max:1.0, grid:{ color:gridColor }, title:{ display:true, text:"Index Value" } }
-      }
+    options: { responsive:true, interaction:{mode:"index",intersect:false},
+      plugins:{ legend:{position:"top"}, tooltip:{callbacks:{afterBody: items => { const d=monthlyData[items[0].dataIndex]; return d.is_anomaly?["","Anomaly month"]:[]; }}} },
+      scales:{ x:{grid:{color:gridColor}}, y:{min:-0.1,max:1.0,grid:{color:gridColor},title:{display:true,text:"Index Value"}} }
     }
   });
 
@@ -201,8 +267,8 @@ if (monthlyData.length) {
       { label:"NDVI Anomaly Count", data:monthlyData.map(d=>d.ndvi_anomaly_count), backgroundColor:"rgba(180,72,0,0.8)" },
       { label:"NDMI Anomaly Count", data:monthlyData.map(d=>d.ndmi_anomaly_count), backgroundColor:"rgba(26,82,118,0.8)" }
     ]},
-    options:{ responsive:true, plugins:{ legend:{ position:"top" } },
-      scales:{ x:{ grid:{ color:gridColor } }, y:{ beginAtZero:true, grid:{ color:gridColor }, title:{ display:true, text:"Pixel Count" } } }
+    options:{ responsive:true, plugins:{legend:{position:"top"}},
+      scales:{ x:{grid:{color:gridColor}}, y:{beginAtZero:true,grid:{color:gridColor},title:{display:true,text:"Pixel Count"}} }
     }
   });
 }
@@ -211,15 +277,12 @@ if (scatterData.normal.length || scatterData.anomaly.length) {
   new Chart(document.getElementById("scatterChart"), {
     type:"scatter",
     data:{ datasets:[
-      { label:"Normal",  data:scatterData.normal,  backgroundColor:"rgba(39,174,96,0.3)",  pointRadius:2 },
-      { label:"Anomaly", data:scatterData.anomaly, backgroundColor:"rgba(192,57,43,0.7)",  pointRadius:3 }
+      { label:"Normal",  data:scatterData.normal,  backgroundColor:"rgba(39,174,96,0.3)", pointRadius:2 },
+      { label:"Anomaly", data:scatterData.anomaly, backgroundColor:"rgba(192,57,43,0.7)", pointRadius:3 }
     ]},
     options:{ responsive:true,
-      plugins:{ legend:{ position:"top" }, tooltip:{ callbacks:{ label: c=>`${c.raw.pixel} | NDVI:${c.raw.x} NDMI:${c.raw.y}` } } },
-      scales:{
-        x:{ title:{ display:true, text:"NDVI Mean" }, min:-1, max:1, grid:{ color:gridColor } },
-        y:{ title:{ display:true, text:"NDMI Mean" }, min:-1, max:1, grid:{ color:gridColor } }
-      }
+      plugins:{ legend:{position:"top"}, tooltip:{callbacks:{label: c=>`${c.raw.pixel} | NDVI:${c.raw.x} NDMI:${c.raw.y}`}} },
+      scales:{ x:{title:{display:true,text:"NDVI Mean"},min:-1,max:1,grid:{color:gridColor}}, y:{title:{display:true,text:"NDMI Mean"},min:-1,max:1,grid:{color:gridColor}} }
     }
   });
 }
@@ -228,15 +291,11 @@ if (heatmapData.length) {
   const maxH = Math.max(...heatmapData.map(d=>d.count));
   new Chart(document.getElementById("heatmapChart"), {
     type:"bar",
-    data:{ labels:heatmapData.map(d=>d.month), datasets:[{
-      label:"Anomalous Pixels", data:heatmapData.map(d=>d.count),
-      backgroundColor:heatmapData.map(d=>{
-        const t=d.count/maxH;
-        return `rgba(${Math.round(192*t+39*(1-t))},${Math.round(57*t+174*(1-t))},${Math.round(43*t+96*(1-t))},0.85)`;
-      })
+    data:{ labels:heatmapData.map(d=>d.month), datasets:[{ label:"Anomalous Pixels", data:heatmapData.map(d=>d.count),
+      backgroundColor:heatmapData.map(d=>{ const t=d.count/maxH; return `rgba(${Math.round(192*t+39*(1-t))},${Math.round(57*t+174*(1-t))},${Math.round(43*t+96*(1-t))},0.85)`; })
     }]},
-    options:{ responsive:true, plugins:{ legend:{ display:false } },
-      scales:{ x:{ grid:{ color:gridColor } }, y:{ beginAtZero:true, grid:{ color:gridColor }, title:{ display:true, text:"Pixel Count" } } }
+    options:{ responsive:true, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:gridColor}}, y:{beginAtZero:true,grid:{color:gridColor},title:{display:true,text:"Pixel Count"}} }
     }
   });
 }
@@ -248,11 +307,8 @@ if (zscoreData.bins.length) {
       { label:"NDVI Z-Score", data:zscoreData.ndvi, backgroundColor:"rgba(39,174,96,0.75)" },
       { label:"NDMI Z-Score", data:zscoreData.ndmi, backgroundColor:"rgba(41,128,185,0.75)" }
     ]},
-    options:{ responsive:true, plugins:{ legend:{ position:"top" } },
-      scales:{
-        x:{ title:{ display:true, text:"Z-Score (clipped to 10)" }, grid:{ color:gridColor } },
-        y:{ beginAtZero:true, title:{ display:true, text:"Pixel Count" }, grid:{ color:gridColor } }
-      }
+    options:{ responsive:true, plugins:{legend:{position:"top"}},
+      scales:{ x:{title:{display:true,text:"Z-Score (clipped to 10)"},grid:{color:gridColor}}, y:{beginAtZero:true,title:{display:true,text:"Pixel Count"},grid:{color:gridColor}} }
     }
   });
 }
@@ -260,11 +316,9 @@ if (zscoreData.bins.length) {
 if (topPixels.length) {
   new Chart(document.getElementById("topPixelsChart"), {
     type:"bar",
-    data:{ labels:topPixels.map(d=>d.pixel), datasets:[{
-      label:"Anomaly Months", data:topPixels.map(d=>d.count), backgroundColor:"rgba(180,72,0,0.8)"
-    }]},
-    options:{ indexAxis:"y", responsive:true, plugins:{ legend:{ display:false } },
-      scales:{ x:{ beginAtZero:true, title:{ display:true, text:"Months Flagged" }, grid:{ color:gridColor } }, y:{ grid:{ color:gridColor } } }
+    data:{ labels:topPixels.map(d=>d.pixel), datasets:[{ label:"Anomaly Months", data:topPixels.map(d=>d.count), backgroundColor:"rgba(180,72,0,0.8)" }]},
+    options:{ indexAxis:"y", responsive:true, plugins:{legend:{display:false}},
+      scales:{ x:{beginAtZero:true,title:{display:true,text:"Months Flagged"},grid:{color:gridColor}}, y:{grid:{color:gridColor}} }
     }
   });
 }

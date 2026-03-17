@@ -11,7 +11,6 @@ def safe_int(value, default=None):
         return default
 
 def safe_json(obj):
-    """Convert to JSON string, ensuring it's safe for embedding in HTML script tags."""
     return json.dumps(obj, ensure_ascii=True, default=str)
 
 @app.route("/", methods=["GET", "POST"])
@@ -45,27 +44,30 @@ def index():
         ad = s3["anomaly_detected"]
         nv = s3.get("ndvi_anomaly_count", 0)
         nm = s3.get("ndmi_anomaly_count", 0)
-        tp = s3.get("total_pixels", 0)
 
         context["result"] = {
             "selected_timeframe":   f"{start_year}-01 to {end_year}-12",
             "timelapse_status":     "Generated" if generate_timelapse else "Not generated",
+            "generate_timelapse":   generate_timelapse,
             "anomaly_detected":     ad,
-            "anomaly_result":       "⚠ Anomaly Detected" if ad else "✓ No Anomaly Detected",
+            "anomaly_result":       "Anomaly Detected" if ad else "No Anomaly Detected",
             "anomaly_event_count":  s3.get("anomaly_count", 0),
             "ndvi_anomaly_count":   nv,
             "ndmi_anomaly_count":   nm,
-            "total_pixels":         tp,
+            "total_pixels":         s3.get("total_pixels", 0),
             "yearly_breakdown":     s3.get("yearly_breakdown", []),
+            "run_ids":              s3.get("run_ids", []),
             "monthly_chart_json":   safe_json(s3.get("monthly_chart", [])),
             "scatter_json":         safe_json(s3.get("scatter_data", {"normal":[],"anomaly":[]})),
             "zscore_json":          safe_json(s3.get("zscore_histogram", {"ndvi":[],"ndmi":[],"bins":[]})),
             "top_pixels_json":      safe_json(s3.get("top_pixels", [])),
             "monthly_heatmap_json": safe_json(s3.get("monthly_heatmap", [])),
             "map_points_json":      safe_json(s3.get("map_points", {"normal":[],"anomaly":[]})),
+            "timelapse_urls":       s3.get("timelapse_urls", {}),
+            "pipeline_metrics":     s3.get("pipeline_metrics", []),
             "banner_message": (
-                f"⚠ Anomaly detected in the selected timeframe ({nv} NDVI, {nm} NDMI events)"
-                if ad else f"✓ No anomaly detected for {start_year} to {end_year}."
+                f"Anomaly detected in the selected timeframe ({nv} NDVI, {nm} NDMI events)"
+                if ad else f"No anomaly detected for {start_year} to {end_year}."
             ),
         }
     return render_template("index.html", **context)
