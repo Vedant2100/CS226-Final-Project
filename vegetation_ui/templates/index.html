@@ -22,18 +22,34 @@
    <div class="input-grid">
     <div class="form-group">
      <label for="start_year">Start Year</label>
-     <input type="number" id="start_year" name="start_year" value="{{ start_year }}" placeholder="e.g. 2019" required>
+     <input type="number" id="start_year" name="start_year" value="{{ start_year }}" placeholder="e.g. 2026" required>
     </div>
     <div class="form-group">
      <label for="end_year">End Year</label>
      <input type="number" id="end_year" name="end_year" value="{{ end_year }}" placeholder="e.g. 2026" required>
     </div>
    </div>
+
+   <div class="resolution-row">
+    <label>Resolution</label>
+    <div class="resolution-buttons">
+     <label class="res-btn {% if resolution == '20m' %}active{% endif %}">
+      <input type="radio" name="resolution" value="20m" {% if resolution == '20m' %}checked{% endif %}> 20m
+     </label>
+     <label class="res-btn {% if resolution == '30m' %}active{% endif %}">
+      <input type="radio" name="resolution" value="30m" {% if resolution == '30m' %}checked{% endif %}> 30m
+     </label>
+     <label class="res-btn {% if resolution == '50m' %}active{% endif %}">
+      <input type="radio" name="resolution" value="50m" {% if resolution == '50m' %}checked{% endif %}> 50m
+     </label>
+    </div>
+   </div>
+
    <div class="checkbox-row">
     <input type="checkbox" id="generate_timelapse" name="generate_timelapse" {% if generate_timelapse %}checked{% endif %}>
     <label for="generate_timelapse">Generate Timelapse</label>
    </div>
-   <button type="submit" class="run-btn">Run Analysis</button>
+   <button type="submit" class="run-btn">▶ Run Analysis</button>
   </form>
 
   {% if error %}<div class="message error-message">{{ error }}</div>{% endif %}
@@ -44,53 +60,23 @@
    {% if result.anomaly_detected %}⚠{% endif %} {{ result.banner_message }}
   </div>
 
-  <!-- SECTION 1: Summary -->
-  <div class="section-block">
-   <h2 class="section-title">📊 Summary
-    {% if result.run_ids %}
-    <span class="run-ids-tag">
-     Run{% if result.run_ids|length > 1 %}s{% endif %}:
-     {% for rid in result.run_ids %}
-      <span class="run-id-pill">{{ rid }}</span>
-     {% endfor %}
-    </span>
-    {% endif %}
-   </h2>
-   <div class="results-grid">
-    <div class="info-card">
-     <h2>Selected Timeframe</h2>
-     <p>{{ result.selected_timeframe }}</p>
-    </div>
-    <div class="info-card">
-     <h2>Total Pixels Monitored</h2>
-     <p class="success-text">{{ result.total_pixels }} pixels</p>
-    </div>
-    <div class="info-card">
-     <h2>Overall Result</h2>
-     <p class="{% if result.anomaly_detected %}warning-text{% else %}success-text{% endif %}">
-      {% if result.anomaly_detected %}⚠{% endif %} {{ result.anomaly_result }}
-     </p>
-    </div>
-    <div class="info-card">
-     <h2>Total Anomaly Events</h2>
-     <p class="{% if result.anomaly_event_count > 0 %}warning-text{% else %}success-text{% endif %}">{{ result.anomaly_event_count }} events</p>
-    </div>
-    <div class="info-card">
-     <h2>NDVI Anomalies</h2>
-     <p class="{% if result.ndvi_anomaly_count > 0 %}warning-text{% else %}success-text{% endif %}">{{ result.ndvi_anomaly_count }} events</p>
-    </div>
-    <div class="info-card">
-     <h2>NDMI Anomalies</h2>
-     <p class="{% if result.ndmi_anomaly_count > 0 %}warning-text{% else %}success-text{% endif %}">{{ result.ndmi_anomaly_count }} events</p>
-    </div>
-    <div class="info-card">
-     <h2>Timelapse</h2>
-     <p>{{ result.timelapse_status }}</p>
-    </div>
+  <!-- Run Info Bar -->
+  <div class="run-info-bar">
+   <div class="run-info-item">
+    <span class="run-info-label">Resolution</span>
+    <span class="run-info-value res-badge">{{ result.resolution }}</span>
+   </div>
+   <div class="run-info-item">
+    <span class="run-info-label">Run ID</span>
+    <span class="run-info-value run-id-pill">{{ result.run_id }}</span>
+   </div>
+   <div class="run-info-item">
+    <span class="run-info-label">Timeframe</span>
+    <span class="run-info-value">{{ result.selected_timeframe }}</span>
    </div>
   </div>
 
-  <!-- SECTION 2: Timelapse GIFs -->
+  <!-- Timelapse GIFs -->
   {% if result.generate_timelapse and result.timelapse_urls %}
   <div class="section-block">
    <h2 class="section-title">🎬 Timelapse Animations <span class="source-tag">S3 GIFs</span></h2>
@@ -105,7 +91,7 @@
   </div>
   {% endif %}
 
-  <!-- SECTION 3: Monthly Trends -->
+  <!-- Monthly Trends -->
   {% if result.monthly_chart_json != '[]' %}
   <div class="section-block">
    <h2 class="section-title">📈 Monthly Trends <span class="source-tag">monthly_stats</span></h2>
@@ -122,7 +108,7 @@
   </div>
   {% endif %}
 
-  <!-- SECTION 4: Pixel-Level Analysis -->
+  <!-- Pixel-Level Analysis -->
   <div class="section-block">
    <h2 class="section-title">🔬 Pixel-Level Analysis <span class="source-tag">plot_stats</span></h2>
    <div class="chart-row">
@@ -151,7 +137,7 @@
    </div>
   </div>
 
-  <!-- SECTION 5: Anomaly Map -->
+  <!-- Anomaly Map -->
   <div class="section-block">
    <h2 class="section-title">🗺 Anomaly Map <span class="source-tag">pixel_coords + anomaly_events</span></h2>
    <div class="map-legend">
@@ -161,26 +147,18 @@
    <div id="anomalyMap"></div>
   </div>
 
-  <!-- SECTION 6: Pipeline Metrics -->
+  <!-- Pipeline Metrics -->
   {% if result.pipeline_metrics %}
   <div class="section-block">
    <h2 class="section-title">⚡ Pipeline Metrics <span class="source-tag">pipeline_metrics.csv</span></h2>
    <div class="metrics-table-wrap">
     <table class="metrics-table">
      <thead>
-      <tr>
-       {% for key in result.pipeline_metrics[0].keys() %}
-       <th>{{ key }}</th>
-       {% endfor %}
-      </tr>
+      <tr>{% for key in result.pipeline_metrics[0].keys() %}<th>{{ key }}</th>{% endfor %}</tr>
      </thead>
      <tbody>
       {% for row in result.pipeline_metrics %}
-      <tr>
-       {% for val in row.values() %}
-       <td>{{ val }}</td>
-       {% endfor %}
-      </tr>
+      <tr>{% for val in row.values() %}<td>{{ val }}</td>{% endfor %}</tr>
       {% endfor %}
      </tbody>
     </table>
@@ -188,7 +166,7 @@
   </div>
   {% endif %}
 
-  <!-- SECTION 7: Year-by-Year Breakdown -->
+  <!-- Year-by-Year Breakdown -->
   {% if result.yearly_breakdown %}
   <div class="section-block">
    <h2 class="section-title">📅 Year-by-Year Breakdown</h2>
@@ -216,6 +194,16 @@
   {% endif %}
  </div>
 </div>
+
+<!-- Resolution button script - always loaded -->
+<script>
+document.querySelectorAll('.res-btn input').forEach(input => {
+  input.addEventListener('change', function() {
+    document.querySelectorAll('.res-btn').forEach(btn => btn.classList.remove('active'));
+    this.parentElement.classList.add('active');
+  });
+});
+</script>
 
 {% if result %}
 <script>

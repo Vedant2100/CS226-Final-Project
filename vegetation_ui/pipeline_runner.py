@@ -14,10 +14,12 @@ MONTH_NAMES = {
     7:"Jul", 8:"Aug", 9:"Sep", 10:"Oct", 11:"Nov", 12:"Dec"
 }
 
-def list_run_folders():
-    response = s3.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix="results/", Delimiter="/")
-    run_folders = [p["Prefix"] for p in response.get("CommonPrefixes", []) if p["Prefix"] != "results/"]
-    return sorted(run_folders, reverse=True)
+# ── Resolution to Run ID mapping ──────────────────────────────
+RESOLUTION_RUN_MAP = {
+    "20m": "results/run_id=20260317_061437/",
+    "30m": "results/run_id=20260317_013528/",
+    "50m": "results/run_id=20260317_055040/",
+}
 
 def get_folder_name(run_prefix, base_name):
     for suffix in ["", "_parquet"]:
@@ -58,10 +60,9 @@ def get_presigned_url(key, expires=3600):
         return None
 
 def safe_float(val):
-    """Convert to float, returning 0.0 for NaN/None/invalid values."""
     try:
         v = float(val)
-        return round(v, 4) if v == v else 0.0  # v==v is False for NaN
+        return round(v, 4) if v == v else 0.0
     except:
         return 0.0
 
@@ -72,6 +73,8 @@ def _empty_result():
         "ndvi_anomaly_count":  0,
         "ndmi_anomaly_count":  0,
         "total_pixels":        0,
+        "resolution":          "",
+        "run_id":              "",
         "yearly_breakdown":    [],
         "monthly_chart":       [],
         "scatter_data":        {"normal": [], "anomaly": []},
@@ -81,7 +84,7 @@ def _empty_result():
         "map_points":          {"normal": [], "anomaly": []},
         "timelapse_urls":      {},
         "pipeline_metrics":    [],
-        "run_ids":             [],
+        "params":              {},
     }
 
 # ── Read helpers ──────────────────────────────────────────────
@@ -142,12 +145,18 @@ def read_pipeline_metrics(run_prefix):
     try:
         resp = s3.get_object(Bucket=S3_BUCKET_NAME, Key=key)
         df = pd.read_csv(BytesIO(resp["Body"].read()))
-        metrics = []
-        for _, row in df.iterrows():
-            metrics.append({k: str(v) for k, v in row.items()})
-        return metrics
+        return [{k: str(v) for k, v in row.items()} for _, row in df.iterrows()]
     except:
         return []
+
+def read_params(run_prefix):
+    key = f"{run_prefix}params.csv"
+    try:
+        resp = s3.get_object(Bucket=S3_BUCKET_NAME, Key=key)
+        df = pd.read_csv(BytesIO(resp["Body"].read()))
+        return {str(row["Parameter"]): str(row["Value"]) for _, row in df.iterrows()}
+    except:
+        return {}
 
 def get_timelapse_urls(run_prefix):
     urls = {}
@@ -190,11 +199,7 @@ def build_scatter(df, max_pts=600):
         for _, r in d.iterrows():
             x = safe_float(r["ndvi_mean"])
             y = safe_float(r["ndmi_mean"])
-            result.append({
-                "x": x,
-                "y": y,
-                "pixel": str(r["true_pixel_id"])
-            })
+            result.append({"x": x, "y": y, "pixel": str(r["true_pixel_id"])})
         return result
     return {"normal": pts(normal), "anomaly": pts(anomaly)}
 
@@ -202,16 +207,15 @@ def build_zscore(df):
     ndvi_z = df["ndvi_zscore"].dropna().clip(-10, 10).tolist()
     ndmi_z = df["ndmi_zscore"].dropna().clip(-10, 10).tolist()
     bin_edges = list(range(-10, 11, 1))
-    ndvi_c = [0] * (len(bin_edges) - 1)
-    ndmi_c = [0] * (len(bin_edges) - 1)
+    ndvi_c = [0]*(len(bin_edges)-1); ndmi_c = [0]*(len(bin_edges)-1)
     for z in ndvi_z:
-        if z != z: continue  # skip NaN
-        i = min(int(z + 10), len(ndvi_c) - 1)
-        if 0 <= i < len(ndvi_c): ndvi_c[i] += 1
+        if z != z: continue
+        i = min(int(z+10), len(ndvi_c)-1)
+        if 0<=i<len(ndvi_c): ndvi_c[i]+=1
     for z in ndmi_z:
-        if z != z: continue  # skip NaN
-        i = min(int(z + 10), len(ndmi_c) - 1)
-        if 0 <= i < len(ndmi_c): ndmi_c[i] += 1
+        if z != z: continue
+        i = min(int(z+10), len(ndmi_c)-1)
+        if 0<=i<len(ndmi_c): ndmi_c[i]+=1
     return {"ndvi": ndvi_c, "ndmi": ndmi_c, "bins": [str(b) for b in bin_edges[:-1]]}
 
 def build_top_pixels(df, n=10):
@@ -227,14 +231,32 @@ def build_monthly_heatmap(df):
 def build_map_points(coords_df, anom_df):
     if coords_df.empty or anom_df.empty:
         return {"normal": [], "anomaly": []}
+
+    # Convert UTM to lat/lon if needed
+    # If coordinates are large numbers they are UTM, not lat/lon
+    if coords_df["lon"].abs().max() > 1000:
+        try:
+            from pyproj import Transformer
+            # UTM Zone 13N (EPSG:32613) to WGS84 (EPSG:4326)
+            transformer = Transformer.from_crs("EPSG:32613", "EPSG:4326", always_xy=True)
+            lons, lats = transformer.transform(
+                coords_df["lon"].values,
+                coords_df["lat"].values
+            )
+            coords_df = coords_df.copy()
+            coords_df["lon"] = lons
+            coords_df["lat"] = lats
+        except Exception as e:
+            print("UTM conversion failed:", e)
+            return {"normal": [], "anomaly": []}
+
     anomaly_pixels = set(anom_df[anom_df["is_anomaly"]]["true_pixel_id"].unique())
     normal_pts = []; anomaly_pts = []
     for _, row in coords_df.iterrows():
         pid = row["true_pixel_id"]
         lat = safe_float(row["lat"])
         lon = safe_float(row["lon"])
-        if lat == 0.0 and lon == 0.0:
-            continue
+        if lat == 0.0 and lon == 0.0: continue
         pt = {"id": str(pid), "lat": lat, "lon": lon}
         if pid in anomaly_pixels:
             anomaly_pts.append(pt)
@@ -245,54 +267,37 @@ def build_map_points(coords_df, anom_df):
         normal_pts = random.sample(normal_pts, 500)
     return {"normal": normal_pts, "anomaly": anomaly_pts}
 
-# ── Main fetch ────────────────────────────────────────────────
-def fetch_results(eval_start, eval_end):
+# ── Main fetch by resolution ──────────────────────────────────
+def fetch_results(eval_start, eval_end, resolution="30m"):
     start_year, start_month = map(int, eval_start.split("-"))
     end_year,   end_month   = map(int, eval_end.split("-"))
     start_ym = start_year * 100 + start_month
     end_ym   = end_year   * 100 + end_month
 
-    run_folders = list_run_folders()
-    if not run_folders:
+    run_prefix = RESOLUTION_RUN_MAP.get(resolution)
+    if not run_prefix:
         return _empty_result()
 
-    all_anom_dfs   = []
-    all_ms_dfs     = []
-    all_plot_dfs   = []
-    all_coords_dfs = []
-    all_metrics    = []
-    all_timelapse  = {}
-    used_run_ids   = []
+    run_id = run_prefix.rstrip("/").split("run_id=")[-1]
 
-    for run_prefix in run_folders:
-        run_id = run_prefix.rstrip("/").split("run_id=")[-1]
-        adf = read_anomaly_df(run_prefix, start_ym, end_ym)
-        if not adf.empty:
-            all_anom_dfs.append(adf)
-            used_run_ids.append(run_id)
-            ms  = read_monthly_stats(run_prefix, start_ym, end_ym)
-            pdf = read_plot_stats(run_prefix, start_ym, end_ym)
-            cdf = read_pixel_coords(run_prefix)
-            met = read_pipeline_metrics(run_prefix)
-            tl  = get_timelapse_urls(run_prefix)
-            if not ms.empty:  all_ms_dfs.append(ms)
-            if not pdf.empty: all_plot_dfs.append(pdf)
-            if not cdf.empty: all_coords_dfs.append(cdf)
-            all_metrics.extend(met)
-            all_timelapse.update(tl)
+    adf = read_anomaly_df(run_prefix, start_ym, end_ym)
+    if adf.empty:
+        result = _empty_result()
+        result["resolution"] = resolution
+        result["run_id"]     = run_id
+        return result
 
-    if not all_anom_dfs:
-        return _empty_result()
+    ms_df     = read_monthly_stats(run_prefix, start_ym, end_ym)
+    plot_df   = read_plot_stats(run_prefix, start_ym, end_ym)
+    coords_df = read_pixel_coords(run_prefix)
+    metrics   = read_pipeline_metrics(run_prefix)
+    params    = read_params(run_prefix)
+    timelapse = get_timelapse_urls(run_prefix)
 
-    anom_df   = pd.concat(all_anom_dfs,   ignore_index=True)
-    ms_df     = pd.concat(all_ms_dfs,     ignore_index=True).sort_values("_ym") if all_ms_dfs    else pd.DataFrame()
-    plot_df   = pd.concat(all_plot_dfs,   ignore_index=True)                    if all_plot_dfs   else pd.DataFrame()
-    coords_df = pd.concat(all_coords_dfs, ignore_index=True).drop_duplicates("true_pixel_id") if all_coords_dfs else pd.DataFrame()
-
-    overall = anom_df[anom_df["is_anomaly"]]
+    overall = adf[adf["is_anomaly"]]
     yearly  = []
-    for year in range(start_year, end_year + 1):
-        yd = anom_df[anom_df["year"] == year]
+    for year in range(start_year, end_year+1):
+        yd = adf[adf["year"]==year]
         ad = yd[yd["is_anomaly"]]
         yearly.append({
             "year":             year,
@@ -307,17 +312,19 @@ def fetch_results(eval_start, eval_end):
     return {
         "anomaly_detected":    len(overall) > 0,
         "anomaly_count":       len(overall),
-        "ndvi_anomaly_count":  int(anom_df["is_ndvi_anomaly"].sum()),
-        "ndmi_anomaly_count":  int(anom_df["is_ndmi_anomaly"].sum()),
+        "ndvi_anomaly_count":  int(adf["is_ndvi_anomaly"].sum()),
+        "ndmi_anomaly_count":  int(adf["is_ndmi_anomaly"].sum()),
         "total_pixels":        total_pixels,
+        "resolution":          resolution,
+        "run_id":              run_id,
         "yearly_breakdown":    yearly,
         "monthly_chart":       build_monthly_chart(ms_df)      if not ms_df.empty   else [],
         "scatter_data":        build_scatter(plot_df)           if not plot_df.empty else {"normal":[],"anomaly":[]},
         "zscore_histogram":    build_zscore(plot_df)            if not plot_df.empty else {"ndvi":[],"ndmi":[],"bins":[]},
         "top_pixels":          build_top_pixels(plot_df)        if not plot_df.empty else [],
         "monthly_heatmap":     build_monthly_heatmap(plot_df)   if not plot_df.empty else [],
-        "map_points":          build_map_points(coords_df, anom_df),
-        "timelapse_urls":      all_timelapse,
-        "pipeline_metrics":    all_metrics,
-        "run_ids":             used_run_ids,
+        "map_points":          build_map_points(coords_df, adf),
+        "timelapse_urls":      timelapse,
+        "pipeline_metrics":    metrics,
+        "params":              params,
     }
