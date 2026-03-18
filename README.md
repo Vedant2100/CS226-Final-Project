@@ -63,7 +63,8 @@ Before running, ensure the following are set up:
 
 ---
 
-## How to Run
+## How to Run (for both Data Ingestion and Data Transformation)
+
 
 Execute the cells in order. Each cell is self-contained and prints its status on completion.
 
@@ -110,6 +111,39 @@ Cell 15 — Export → tile → merge → upload to S3
 ```
 
 GEE exports Boulder County in a 4×3 grid of 12 tiles to stay under the 50MB API limit. Tiles are merged using `rasterio.merge` with `nodata=-9999`.
+
+---
+
+## How to Run Data Transformation
+
+Execute the cells in order in the `data_transformation_and_detection.ipynb` notebook. Each cell prints its status on completion.
+
+### Step 1 — Secrets Check
+Ensure all required Colab secrets are set: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME`, `DB_HOST`, `DB_PASSWORD`.
+
+### Step 2 — Install Dependencies
+Run the installation cell to install all required packages (GDAL, rasterio, pyspark, etc.).
+
+### Step 3 — Configure Parameters
+Set evaluation window, S3/DB credentials, and pipeline parameters in the Params cell.
+
+### Step 4 — Initialize Spark & Download WorldCover
+Run the Spark initialization and WorldCover download cells.
+
+### Step 5 — Fetch Scenes
+Choose scene fetch mode (`serial`, `concurrent`, or `query`). Run the cell to fetch scene metadata from S3 or PostGIS.
+
+### Step 6 — Data Transformation
+Run the transformation cell to apply forest masking, compute vegetation indices, and aggregate monthly time series.
+
+### Step 7 — Anomaly Detection
+Run the anomaly detection cell to compute Z-scores and flag anomalies.
+
+### Step 8 — Export Results
+Run the export cells to save anomaly events, monthly stats, and pixel coordinates to S3.
+
+### Step 9 — (Optional) Generate Timelapse
+Run the timelapse cell to create NDVI/NDMI/false-color GIFs and upload to S3.
 
 ---
 
