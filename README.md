@@ -8,7 +8,7 @@ Scalable Analysis of Vegetation Anomalies Preceding Plant Disease Outbreaks
 CS226 Final Project Group
 
 ## Group Number
-4
+2
 
 ## Members
 - **THRISHA AMBAREESHARAJE URS URS** | 862638215 | University of California, Riverside, USA
