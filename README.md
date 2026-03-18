@@ -29,3 +29,10 @@ This section specifies the responsibilities and work performed by each team memb
 • Vedant Borkute: I contributed to the initial research on dataset sources and experimented with timelapse generation. I helped establish the project repositories and reports and report outlines, and implementing the data transformation pipeline, the evaluation framework, and the generation of output products such as the timelapses, the analytic tables and the anomaly detection run metadata. I also proposed the study area for the pipeline and coordinated the integration of results and documentation across the team.
 
 • Shreyangshu Bera: I contributed in designing and implementing the Z-score-based anomaly detection logic, including the statistical normalization of pixel-level vegetation indices against historical baselines and the calibration of the anomaly threshold from −2.0 to −1.5 to improve sensitivity toward early-stage vegetation stress. In addition, I assisted with the data acquisition pipeline by exporting satellite imagery from Google Earth Engine to local storage and subsequently uploading the processed scenes to the AWS S3 server.
+
+### Source Code Contribution
+
+- **Data Ingestion Notebooks:** Sohum Damani
+- **Data Transformation:** Vedant Borkute
+- **Anomaly Detection Section in Data Transformation:** Shreyangshu Bera
+- **Vegetation UI:** Yashaswini Diggavi
